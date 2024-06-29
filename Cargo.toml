@@ -6,6 +6,10 @@ readme = "README.md"
 repository = "https://github.com/FriquetLuca/string_templater"
 authors = [ "Friquet Luca" ]
 
+[lib]
+name = "string_templater"
+path = "src/lib.rs"
+
 [dependencies]
 serde = { version = "1.0", features = ["derive", "std"] }
 serde_json = "1.0"
