@@ -21,10 +21,12 @@ The syntax is easy and requires you to know only some rules.
 Create your object and define it's fields.
 
 ```rs
+use serde::Serialize;
+
 #[derive(Debug, Serialize)]
 struct Person {
   pub name: String,
-  pub child: Option<Person>,
+  pub child: Option<Box<Person>>,
 }
 ```
 
@@ -34,27 +36,32 @@ For problematic curvy bracket, you'll get a `StringTemplaterError::MissingCurvyB
 
 Now, write down some string template and enjoy:
 ```rs
-use string_templater::*;
+use string_templater::parse;
 
 fn main() {
   let someone = Person {
     name: "Roger".to_string(),
-    child: Some(Person {
+    child: Some(Box::new(Person {
       name: "Betty".to_string(),
-      child: Some(Person {
+      child: Some(Box::new(Person {
         name: "Kenny".to_string(),
         child: None,
-      }),
-    }),
+      })),
+    })),
   };
-  // Print: Hello Roger! Is Betty your child? So your grandchild must be Kenny.
-  println!(parse("Hello {{name}}! Is {{child.name}} your child? So your grandchild must be {{child.child.name}}.", &someone).unwrap());
+  let result = parse("Hello {{name}}! Is {{child.name}} your child? So your grandchild must be {{child.child.name}}.", &someone).unwrap();
+  println!("{}", result); // Display : Hello Roger! Is Betty your child? So your grandchild must be Kenny.
 }
 ```
 
 It support `JSON` object and array for the path notation, making templating text easy.
 
 ```rs
+use serde::Serialize;
+use string_templater::parse;
+
+...
+
 #[derive(Debug, Serialize)]
 struct Classroom {
   pub students: Vec<Child>,
@@ -84,7 +91,7 @@ let classroom = Classroom {
   ]
 };
 let template_str = "You should be {{students.2.name}}.";
-let result = parse(template_str, &classroom).unwrap(); // Display : You should be alice.
+println!("{}", parse(template_str, &classroom).unwrap()); // Display : You should be alice.
 ```
 
 ## Mirroring datas
@@ -93,17 +100,22 @@ For some reason, it might be possible that you need to access the value of a key
 
 First of, let's create a set of datas to show mirroring in action (you can also parse a structure if you want, but it'll be faster to just think of our final datas instead of the full structure).
 ```rs
-let mut a: HashMap<String, String> = HashMap::new();
-a.insert("name".to_string(), "Doe".to_string());
-a.insert("age".to_string(), "35".to_string());
-a.insert("key_name".to_string(), "age".to_string());
+use std::collections::HashMap;
+use string_templater::generate;
+
+...
+
+let mut data: HashMap<String, String> = HashMap::new();
+data.insert("name".to_string(), "Doe".to_string());
+data.insert("age".to_string(), "35".to_string());
+data.insert("key_name".to_string(), "age".to_string());
 ```
 
 To mirror a value, you'll need to use the `*` symbol before the path of your variable. This will use the value of the selected key as a new key to search a value. You can also use multiple mirroring into another using multiples `*`.
 You can see what it does in the following example:
 ```rs
 let template_str = "Hello {{name}}! Is it true that you're {{*key_name}} years old?";
-println!(generate(template_str, &a).unwrap()); // Display : Hello Doe! Is it true that you're 35 years old?
+println!("{}", generate(template_str, &data).unwrap()); // Display : Hello Doe! Is it true that you're 35 years old?
 ```
 
 ## Nested templates
@@ -111,25 +123,30 @@ println!(generate(template_str, &a).unwrap()); // Display : Hello Doe! Is it tru
 There might be reasons where we would like to use multiple templates, nested inside each other. For this very reason, you'll need to write down your string interpolation using the triple curly bracket notation.
 
 ```rs
-let mut a: HashMap<String, String> = HashMap::new();
-a.insert("time".to_string(), "today".to_string());
-a.insert("name".to_string(), "Doe".to_string());
-a.insert("beers_count".to_string(), "2".to_string());
-a.insert(
-    "dialog".to_string(),
-    "I only have {{beers_count}} beers for you {{time}}".to_string(),
+use std::collections::HashMap;
+use string_templater::generate;
+
+...
+
+let mut data: HashMap<String, String> = HashMap::new();
+data.insert("time".to_string(), "today".to_string());
+data.insert("name".to_string(), "Doe".to_string());
+data.insert("beers_count".to_string(), "2".to_string());
+data.insert(
+  "dialog".to_string(),
+  "I only have {{beers_count}} beers for you {{time}}".to_string(),
 );
-a.insert(
-    "bye".to_string(),
-    "Well, bye {{name}}! {{{polite}}}".to_string(),
+data.insert(
+  "bye".to_string(),
+  "Well, bye {{name}}! {{{polite}}}".to_string(),
 );
-a.insert(
-    "polite".to_string(),
-    "Enjoy your {{beers_count}} beers.".to_string(),
+data.insert(
+  "polite".to_string(),
+  "Enjoy your {{beers_count}} beers.".to_string(),
 );
 
 let template_str = "Hello {{name}}! {{{dialog}}}... {{{bye}}}";
-println!(generate(template_str, &a).unwrap()); // Display : Hello Doe! I only have 2 beers for you today... Well, bye Doe! Enjoy your 2 beers.
+println!("{}", generate(template_str, &data).unwrap()); // Display : Hello Doe! I only have 2 beers for you today... Well, bye Doe! Enjoy your 2 beers.
 ```
 
 Nested templates works with mirroring so you can use a mirroring template using `{{{*my_key}}}` pattern.
@@ -145,32 +162,43 @@ By default `generate` and `parse` have `safe_parse` set to `false`, so to use op
 You can now choose to display the missing keys, and if you do, you can override the default display using the `override_missing_keys` with some custom text generated by your function.
 
 ```rs
-let mut a: HashMap<String, String> = HashMap::new();
-a.insert("name".to_string(), "Doe".to_string());
-a.insert("age".to_string(), "35".to_string());
+use std::collections::HashMap;
+use string_templater::{generate_with_options, StringTemplaterOptions};
+
+...
+
+let mut data: HashMap<String, String> = HashMap::new();
+data.insert("name".to_string(), "Doe".to_string());
+data.insert("age".to_string(), "35".to_string());
 
 let template_str = "Hello {{name}}! Is it true that you're {{current_age}} years old?";
-println!(generate_with_options(
-  template_str,
-  &a,
-  &StringTemplaterOptions {
-    safe_parse: true,
-    display_missing_keys: false,
-    override_missing_keys: None,
-  },
-)
-.unwrap()); // Display : Hello Doe! Is it true that you're  years old?
+println!(
+  "{}",
+  generate_with_options(
+    template_str,
+    &data,
+    &StringTemplaterOptions {
+      safe_parse: true,
+      display_missing_keys: false,
+      override_missing_keys: None,
+    },
+  )
+  .unwrap()
+); // Display : Hello Doe! Is it true that you're  years old?
 
-println!(generate_with_options(
-  template_str,
-  &a,
-  &StringTemplaterOptions {
-    safe_parse: true,
-    display_missing_keys: true,
-    override_missing_keys: Some(Box::new(move |s| format!("[key `{}` is missing]", s))),
-  },
-)
-.unwrap()); // Display : Hello Doe! Is it true that you're [key `current_age` is missing] years old?
+println!(
+  "{}",
+  generate_with_options(
+    template_str,
+    &data,
+    &StringTemplaterOptions {
+      safe_parse: true,
+      display_missing_keys: true,
+      override_missing_keys: Some(Box::new(move |s| format!("[key `{}` is missing]", s))),
+    },
+  )
+  .unwrap()
+); // Display : Hello Doe! Is it true that you're [key `current_age` is missing] years old?
 ```
 
 ## Parse to HashMap
