@@ -20,7 +20,7 @@ For problematic curvy bracket, you'll get a `StringTemplaterError::MissingCurvyB
 
 Now, write down some string template and enjoy:
 ```rs
-use string_templater::prelude::*;
+use string_templater::*;
 
 fn main() {
   let someone = Person {
