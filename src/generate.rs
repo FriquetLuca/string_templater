@@ -11,7 +11,7 @@ pub fn generate(
     let mut result = String::new();
     let mut chars = template_str.chars().peekable();
     while let Some(c) = chars.next() {
-        let _ = match c {
+        match c {
             '{' => {
                 if let Some('{') = chars.peek() {
                     chars.next();
@@ -71,33 +71,29 @@ pub fn generate(
                     // Error handling
                     if let Some('}') = chars.peek() {
                         chars.next();
+                    } else if apply_template {
+                        return Err(StringTemplaterError::MissingCurvyBracket(format!(
+                            "Missing three curvy bracket `}}` around `{}`.",
+                            key
+                        )));
                     } else {
-                        if apply_template {
-                            return Err(StringTemplaterError::MissingCurvyBracket(format!(
-                                "Missing three curvy bracket `}}` around `{}`.",
-                                key
-                            )));
-                        } else {
-                            return Err(StringTemplaterError::MissingCurvyBracket(format!(
-                                "Missing two curvy bracket `}}` around `{}`.",
-                                key
-                            )));
-                        }
+                        return Err(StringTemplaterError::MissingCurvyBracket(format!(
+                            "Missing two curvy bracket `}}` around `{}`.",
+                            key
+                        )));
                     }
                     if let Some('}') = chars.peek() {
                         chars.next();
+                    } else if apply_template {
+                        return Err(StringTemplaterError::MissingCurvyBracket(format!(
+                            "Missing two curvy bracket `}}` around `{}`.",
+                            key
+                        )));
                     } else {
-                        if apply_template {
-                            return Err(StringTemplaterError::MissingCurvyBracket(format!(
-                                "Missing two curvy bracket `}}` around `{}`.",
-                                key
-                            )));
-                        } else {
-                            return Err(StringTemplaterError::MissingCurvyBracket(format!(
-                                "Missing one curvy bracket `}}` around `{}`.",
-                                key
-                            )));
-                        }
+                        return Err(StringTemplaterError::MissingCurvyBracket(format!(
+                            "Missing one curvy bracket `}}` around `{}`.",
+                            key
+                        )));
                     }
                     if apply_template {
                         if let Some('}') = chars.peek() {
