@@ -1,0 +1,12 @@
+[package]
+name = "string_templater"
+version = "0.1.0"
+edition = "2021"
+readme = "README.md"
+repository = "https://github.com/FriquetLuca/string_templater"
+authors = [ "Friquet Luca" ]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive", "std"] }
+serde_json = "1.0"
+thiserror = "1"
