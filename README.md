@@ -70,7 +70,7 @@ let classroom = Classroom {
   ]
 };
 let template_str = "You should be {{students.2.name}}.";
-let result = parse(template_str, &classroom).unwrap();
+let result = parse(template_str, &classroom).unwrap(); // Display : You should be alice.
 ```
 
 ## Mirroring datas
