@@ -211,3 +211,17 @@ fn parse_to_hashmap<T: ?Sized + Serialize>(value: &T) -> Result<HashMap<String, 
 ```
 
 The keys of the hashmap contain the parent/child field path of a value using the dot notation.
+
+## Template builder
+
+You could also simply use the template builder to handle your datas.
+Here's an example of the template builder in action:
+
+```rs
+let mut template_builder = TemplateBuilder::new();
+template_builder.insert("name", "Doe");
+template_builder.insert("surname", "Doey");
+let result: String = template_builder.build("Hello {{name}}! Or should I call you {{surname}}?").unwrap();
+```
+
+There's multiple methods available in the builder to simplify the work for you.

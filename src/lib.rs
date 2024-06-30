@@ -5,6 +5,7 @@ mod options;
 mod parse;
 mod parse_to_hashmap;
 mod parse_with_options;
+mod template_builder;
 
 pub use crate::errors::StringTemplaterError;
 pub use crate::generate::generate;
@@ -13,6 +14,7 @@ pub use crate::options::{OverrideMessage, StringTemplaterOptions};
 pub use crate::parse::parse;
 pub use crate::parse_to_hashmap::parse_to_hashmap;
 pub use crate::parse_with_options::parse_with_options;
+pub use crate::template_builder::TemplateBuilder;
 
 #[cfg(test)]
 mod test {
@@ -53,6 +55,51 @@ mod test {
     struct Person {
         pub name: String,
         pub child: Option<Box<Person>>,
+    }
+
+    #[test]
+    fn test_tb_insert() {
+        let mut template_builder = TemplateBuilder::new();
+        template_builder.insert("name", "Doe");
+        template_builder.insert("surname", "Doey");
+        let result = template_builder
+            .build("Hello {{name}}! Or should I call you {{surname}}?")
+            .unwrap();
+        assert_eq!(result, "Hello Doe! Or should I call you Doey?".to_string())
+    }
+
+    #[test]
+    fn test_tb_insert_hashmap() {
+        let mut template_builder = TemplateBuilder::new();
+
+        let mut a: HashMap<String, String> = HashMap::new();
+        a.insert("name".to_string(), "Doe".to_string());
+        a.insert("surname".to_string(), "Doey".to_string());
+
+        template_builder.insert_hashmap(&a);
+
+        let result = template_builder
+            .build("Hello {{name}}! Or should I call you {{surname}}?")
+            .unwrap();
+        assert_eq!(result, "Hello Doe! Or should I call you Doey?".to_string())
+    }
+
+    #[test]
+    fn test_tb_insert_struct() {
+        let mut template_builder = TemplateBuilder::new();
+
+        let a = M {
+            name: "Doe".to_string(),
+            age: 35,
+            key_name: "Doey".to_string(),
+        };
+
+        template_builder.insert_safe_struct(&a);
+
+        let result = template_builder
+            .build("Hello {{name}}! Or should I call you {{key_name}}?")
+            .unwrap();
+        assert_eq!(result, "Hello Doe! Or should I call you Doey?".to_string())
     }
 
     #[test]
